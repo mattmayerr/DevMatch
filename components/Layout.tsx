@@ -6,30 +6,34 @@ import { supabase } from "../lib/supabaseClient";
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const [hasNotifications, setHasNotifications] = useState(false);
 
   useEffect(() => {
-    const loadProfile = async () => {
+    const loadUser = async () => {
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData.user?.id;
       if (!userId) return;
 
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from("profiles")
-        .select("role, name, avatar_url")
+        .select("role, name, company, avatar_url")
         .eq("user_id", userId)
         .single();
 
       if (profile) {
-        setUser(profile); // Includes name and avatar
-        setRole(profile.role);
-      } else {
-        console.error("No profile found", error);
+        setUser({
+          name: profile.role === "employer" ? profile.company : profile.name,
+          role: profile.role,
+          avatar_url: profile.avatar_url,
+        });
       }
+
+      setLoading(false);
     };
 
-    loadProfile();
+    loadUser();
   }, []);
 
   const handleLogout = async () => {
@@ -44,6 +48,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <Link href="/" className="hover:underline">
             Home
           </Link>
+
+          {user?.role === "developer" && (
+            <>
+              <Link href="/jobs" className="mr-4">
+                View Jobs
+              </Link>
+              <Link href="/dashboard" className="mr-4">
+                My Applications
+              </Link>
+            </>
+          )}
+
+          {user?.role === "employer" && (
+            <>
+              <Link href="/post-job" className="mr-4">
+                Post a Job
+              </Link>
+              <Link href="/employer-dashboard" className="mr-4">
+                My Job Posts
+              </Link>
+              <Link href="/developers" className="mr-4">
+                Find Developers
+              </Link>
+            </>
+          )}
 
           {role === "developer" && (
             <>
